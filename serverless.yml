@@ -121,6 +121,13 @@ functions:
           path: create-file/{fileName}
           method: POST
           cors: true
+  getFile:
+    handler: lambdas/endpoints/getFile.handler
+    events:
+      - http:
+          path: get-file/{fileName}
+          method: GET
+          cors: true
      
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
