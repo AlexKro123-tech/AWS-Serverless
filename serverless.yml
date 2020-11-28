@@ -37,6 +37,8 @@ provider:
         - dynamodb:*
         - s3:*
         - ses:*
+        - sns:SetSMSAttributes
+        - sns:Publish
       Resource: '*'
   apiKeys:
 #    - MyFirstApiKey
@@ -165,6 +167,13 @@ functions:
           path: send-email
           method: POST
           cors: true
+  sendSMS:
+    handler: lambdas/endpoints/sendSMS.handler
+    events:
+      - http:
+          path: send-sms
+          method: POST
+          cors: true  
 # The idea is to create a single endpoint which will proxy any request to another 
 # legacy enpoints  
   proxy:
