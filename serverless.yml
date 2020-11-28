@@ -36,7 +36,36 @@ provider:
       Action:
         - dynamodb:*
         - s3:*
+        - ses:*
       Resource: '*'
+  apiKeys:
+#    - MyFirstApiKey
+# Now we are defining groups of API keys to define different quota per each group
+    - free:
+        - myFreeApiKey
+    - paid:
+        - myPaidApiKey
+  usagePlan:
+    - free:
+        quota:
+          limit: 1000
+          period: MONTH
+        throttle:
+          rateLimit: 5
+          burstLimit: 20
+    - paid:
+# removing quota plan makes usagePlan paid unlimited in number of calls per month
+        quota:
+          limit: 10000
+          period: MONTH
+        throttle:
+          rateLimit: 50
+          burstLimit: 200
+    
+# usagePlan defines how many calls per month could be done to API with MyFirstApiKey
+# throttle - define limit of calls per second to prevent DDoS attacks
+# rateLimit: 5 - number of allowed calls per second
+# burstLimit: 20 - for short time it is allowed 20 API calls per second
 
 plugins:
   - serverless-s3-sync
@@ -93,6 +122,7 @@ functions:
           path: get-user/{ID}
           method: GET
           cors: true
+          private: true
   getPlayerScore:
     handler: lambdas/endpoints/getPlayerScore.handler
     events:
@@ -128,7 +158,28 @@ functions:
           path: get-file/{fileName}
           method: GET
           cors: true
-     
+  sendEmail:
+    handler: lambdas/endpoints/sendEmail.handler
+    events:
+      - http:
+          path: send-email
+          method: POST
+          cors: true
+# The idea is to create a single endpoint which will proxy any request to another 
+# legacy enpoints  
+  proxy:
+    handler: lambdas/endpoints/proxy.handler
+    events:
+      - http:
+          path: chuck-norris/{proxy+}
+          method: ANY
+          integration: http-proxy
+          request:
+              uri: http://api.icndb.com/{proxy}
+              parameters:
+                  paths:
+                    proxy: true
+
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
@@ -197,3 +248,18 @@ resources:
           - AttributeName: ID
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+# IAM role that allows services or users to assume into another account.
+    myAssumeRole:
+      Type: AWS::IAM::Role
+      Properties:
+        Rolename: myAssumeRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+                  - apigateway.amazonaws.com
+              Action:
+                - sts:AssumeRole
