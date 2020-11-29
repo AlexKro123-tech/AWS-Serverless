@@ -39,6 +39,7 @@ provider:
         - ses:*
         - sns:SetSMSAttributes
         - sns:Publish
+        - comprehend:*
       Resource: '*'
   apiKeys:
 #    - MyFirstApiKey
@@ -173,7 +174,24 @@ functions:
       - http:
           path: send-sms
           method: POST
-          cors: true  
+          cors: true
+  analyse:
+    handler: lambdas/endpoints/analyse.handler
+    events:
+      - http:
+          path: analyse
+          method: POST
+          cors: true
+  sendReminder:
+    handler: lambdas/scheduleTasks/reminderEmail.handler
+    events:
+      - schedule: cron(0 9 ? * 7 *)
+# cron(0 9 ? * 7 *) - run at 0 min at 09 hour, ? - don't mind day of the month,
+# * - runs everytime, 7 - Saturday, * - every year
+  sendMorningNews:
+    handler: lambdas/scheduleTasks/morningNews.handler
+    events:
+      - schedule: cron(15 7 ? * * *)
 # The idea is to create a single endpoint which will proxy any request to another 
 # legacy enpoints  
   proxy:
@@ -258,17 +276,17 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
 # IAM role that allows services or users to assume into another account.
-    myAssumeRole:
-      Type: AWS::IAM::Role
-      Properties:
-        Rolename: myAssumeRole
-        AssumeRolePolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-            - Effect: Allow
-              Principal:
-                Service:
-                  - lambda.amazonaws.com
-                  - apigateway.amazonaws.com
-              Action:
-                - sts:AssumeRole
+    # myAssumeRole:
+    #   Type: AWS::IAM::Role
+    #   Properties:
+    #     Rolename: myAssumeRole
+    #     AssumeRolePolicyDocument:
+    #       Version: '2012-10-17'
+    #       Statement:
+    #         - Effect: Allow
+    #           Principal:
+    #             Service:
+    #               - lambda.amazonaws.com
+    #               - apigateway.amazonaws.com
+    #           Action:
+    #             - sts:AssumeRole
