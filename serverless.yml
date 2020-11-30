@@ -31,6 +31,7 @@ provider:
   environment:
     tableName: ${self:custom.tableName}
     bucketName: ${self:custom.bucketName}
+    gameGSI: ${self:custom.gameGSI}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -80,6 +81,7 @@ package:
 custom:
   tableName: player-points
   bucketName: alex-serverless-prokect-upload-bucket-123123
+  gameGSI: game-index
   s3Sync:
     - bucketName: ${self:custom.bucketName}
       localDir: UploadData
@@ -182,6 +184,21 @@ functions:
           path: analyse
           method: POST
           cors: true
+  getGameScores:
+    handler: lambdas/endpoints/getGameScores.handler
+    events:
+      - http:
+          path: get-game-scores/{game}
+          method: GET
+          cors: true
+  getGamesForPlayer:
+    handler: lambdas/endpoints/getGamesForPlayer.handler
+    events:
+      - http:
+          path: get-games-for-player/{playerID}
+          method: GET
+          cors: true
+ 
   sendReminder:
     handler: lambdas/scheduleTasks/reminderEmail.handler
     events:
@@ -271,10 +288,22 @@ resources:
         AttributeDefinitions:
           - AttributeName: ID
             AttributeType: S
+          - AttributeName: game
+            AttributeType: S
         KeySchema:
           - AttributeName: ID
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
+
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:custom.gameGSI}
+            KeySchema:
+              - AttributeName: game
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+
+        
 # IAM role that allows services or users to assume into another account.
     # myAssumeRole:
     #   Type: AWS::IAM::Role

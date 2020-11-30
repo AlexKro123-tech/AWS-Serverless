@@ -20,9 +20,38 @@ const hooksWithValidation = ({ bodySchema, pathSchema }) => {
     );
 };
 
+const hookPathValidation = ({pathSchema }) => {
+    return useHooks(
+        {
+            before: [logEvent, parseEvent, validatePaths],
+            after: [],
+            onError: [handleUnexpectedError],
+        },
+        {
+            pathSchema,
+        }
+    );
+};
+
+const hookQueryParamsAndPathValidation = ({queryParamsSchema, pathSchema}) => {
+    return useHooks(
+        {
+            before: [logEvent, parseEvent, validateQueryParams, validatePaths],
+            after: [],
+            onError: [handleUnexpectedError],
+        },
+        {
+            queryParamsSchema,
+            pathSchema
+        }
+    );
+};
+
 module.exports = {
     withHooks,
     hooksWithValidation,
+    hookPathValidation,
+    hookQueryParamsAndPathValidation,
 };
 
 const validateEventBody = async state => {
@@ -57,6 +86,25 @@ const validatePaths = async state => {
         await pathSchema.validate(event.pathParameters, { strict: true });
     } catch (error) {
         console.log('yup validation error of path parameters', error);
+        state.exit = true;
+        state.response = { statusCode: 400, body: JSON.stringify({ error: error.message }) };
+    }
+    return state;
+};
+
+const validateQueryParams = async state => {
+    const { queryParamsSchema } = state.config;
+
+    if (!queryParamsSchema) {
+        throw Error('missing the required queryParams schema');
+    }
+
+    try {
+        const { event } = state;
+
+        await queryParamsSchema.validate(event.queryParamsParameters, { strict: true });
+    } catch (error) {
+        console.log('yup validation error of queryParams parameters', error);
         state.exit = true;
         state.response = { statusCode: 400, body: JSON.stringify({ error: error.message }) };
     }
